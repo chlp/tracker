@@ -26,26 +26,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             print("No location manager. Exit")
             exit(0)
         }
-        
+
         locationManager = CLLocationManager()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
-//        locationManager.requestAlwaysAuthorization()
-//        locationManager.startUpdatingLocation()
+        locationManager.requestAlwaysAuthorization()
+        locationManager.startUpdatingLocation()
 
         return true
     }
     
-//    func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation])
-//    {
-//        
-//        let location = locations.last! as CLLocation
-//
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        print("locationManager")
+        let location = locations.last! as CLLocation
+        print(location)
 //        let center = CLLocationCoordinate2D(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
 //        let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
-//
 //        self.map.setRegion(region, animated: true)
-//    }
+    }
 
     func applicationWillResignActive(_ application: UIApplication) {
         print("applicationWillResignActive")
