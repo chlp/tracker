@@ -74,8 +74,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.requestAlwaysAuthorization()
         locationManager.startUpdatingLocation()
-        
-        print(sendJson(urlString: cloudUrlString, data: [1]))
 
         return true
     }
@@ -83,19 +81,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let location = locations.last! as CLLocation
 
-        print(
-            deviceUuid(),
-            location.coordinate.latitude,
-            location.coordinate.longitude,
-            location.speed,
-            UIDevice.current.batteryState,
-            UIDevice.current.batteryLevel,
-            UIDevice.current.model,
-            UIDevice.current.localizedModel,
-            UIDevice.current.name,
-            UIDevice.current.systemName,
-            UIDevice.current.systemVersion
-        )
+        print(sendJson(urlString: cloudUrlString, data: [
+            "deviceId": deviceUuid(),
+            "latitude": location.coordinate.latitude,
+            "longitude": location.coordinate.longitude,
+            "speed": location.speed,
+            "batteryState": UIDevice.current.batteryState.rawValue,
+            "batteryLevel": UIDevice.current.batteryLevel,
+            "deviceModel": UIDevice.current.model,
+            "deviceLocalizedModel": UIDevice.current.localizedModel,
+            "deviceName": UIDevice.current.name,
+            "deviceSystemName": UIDevice.current.systemName,
+            "deviceSystemVersion": UIDevice.current.systemVersion
+        ]))
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
