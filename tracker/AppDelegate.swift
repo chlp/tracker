@@ -17,6 +17,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     var window: UIWindow?
     var locationManager: CLLocationManager!
     var cloudUrlString = "https://steptracker.tw1.ru/track.php"
+    var lastUpdateTime : Date!
     
     func deviceUuid() -> String {
         return (UIDevice.current.identifierForVendor?.uuidString)!
@@ -37,11 +38,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
 
+        let semaphore = DispatchSemaphore(value: 0)
+
         var httpError = false
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard let data = data, error == nil else {
                 print("error=\(error)")
                 httpError = true
+                semaphore.signal()
                 return
             }
 
@@ -53,14 +57,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
             let responseString = String(data: data, encoding: .utf8)
             print("responseString = \(responseString)")
+            semaphore.signal()
         }
         task.resume()
 
+        semaphore.wait()
+
+        print("err", httpError)
         return !httpError
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         print("application")
+        
+        lastUpdateTime = Date.init(timeIntervalSince1970: 0)
 
         if (!CLLocationManager.locationServicesEnabled()) {
             print("No location manager. Exit")
@@ -81,7 +91,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let location = locations.last! as CLLocation
 
-        print(sendJson(urlString: cloudUrlString, data: [
+        let success = sendJson(urlString: cloudUrlString, data: [
             "deviceId": deviceUuid(),
             "latitude": location.coordinate.latitude,
             "longitude": location.coordinate.longitude,
@@ -93,7 +103,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             "deviceName": UIDevice.current.name,
             "deviceSystemName": UIDevice.current.systemName,
             "deviceSystemVersion": UIDevice.current.systemVersion
-        ]))
+        ])
+
+        print("suc", success)
+        if (success) {
+            lastUpdateTime = Date.init()
+        }
+
+        let viewController = window?.rootViewController as! ViewController
+        let interval : TimeInterval = Date().timeIntervalSince(lastUpdateTime)
+        let intervalSeconds = Int(interval)
+        viewController.mySetLabelText(text: String(intervalSeconds))
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
