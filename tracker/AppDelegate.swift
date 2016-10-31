@@ -11,12 +11,14 @@ import Darwin
 import CoreLocation
 
 
+let CLOUD_URL:String = "https://steptracker.tw1.ru/track.php"
+
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
 
     var window: UIWindow?
     var locationManager: CLLocationManager!
-    var cloudUrlString = "https://steptracker.tw1.ru/track.php"
     var lastUpdateTime : Date!
     var timer : Timer!
 
@@ -24,46 +26,35 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         return (UIDevice.current.identifierForVendor?.uuidString)!
     }
 
-    func sendJson(urlString: String, data: Any) -> Bool {
+    func sendLocationsToCloud(urlString: String, data: Any) {
         var jsonData : Data
         do {
-            jsonData = try JSONSerialization.data(withJSONObject: data, options: JSONSerialization.WritingOptions.prettyPrinted)
+            jsonData = try JSONSerialization.data(withJSONObject: data)
         } catch {
             print("json error")
-            return false
+            return
         }
 
-        let url = URL(string: urlString)!
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: URL(string: urlString)!)
         request.httpMethod = "POST"
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
 
-        let semaphore = DispatchSemaphore(value: 0)
-
-        var httpError = false
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard let _ = data, error == nil else {
                 print("error=\(error)")
-                httpError = true
-                semaphore.signal()
                 return
             }
 
             if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {
                 print("statusCode should be 200, but is \(httpStatus.statusCode)")
                 print("response = \(response)")
-                httpError = true
+            } else {
+                print(Date(), "success update")
+                self.lastUpdateTime = Date.init()
             }
-
-//            let responseString = String(data: data, encoding: .utf8)
-            semaphore.signal()
         }
         task.resume()
-
-        semaphore.wait()
-
-        return !httpError
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
@@ -103,24 +94,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     func updateLocation() {
         let location = locationManager.location! as CLLocation
 
-        let success = sendJson(urlString: cloudUrlString, data: [
+        sendLocationsToCloud(urlString: CLOUD_URL, data: [
             "deviceId": deviceUuid(),
             "latitude": location.coordinate.latitude,
-            "longitude": location.coordinate.longitude,
-            "speed": location.speed,
-            "batteryState": UIDevice.current.batteryState.rawValue,
-            "batteryLevel": UIDevice.current.batteryLevel,
-            "deviceModel": UIDevice.current.model,
-            "deviceLocalizedModel": UIDevice.current.localizedModel,
-            "deviceName": UIDevice.current.name,
-            "deviceSystemName": UIDevice.current.systemName,
-            "deviceSystemVersion": UIDevice.current.systemVersion
-            ])
-
-        if (success) {
-            print(Date(), "success update")
-            lastUpdateTime = Date.init()
-        }
+            "longitude": location.coordinate.longitude
+//            "speed": location.speed,
+//            "batteryState": UIDevice.current.batteryState.rawValue,
+//            "batteryLevel": UIDevice.current.batteryLevel,
+//            "deviceModel": UIDevice.current.model,
+//            "deviceLocalizedModel": UIDevice.current.localizedModel,
+//            "deviceName": UIDevice.current.name,
+//            "deviceSystemName": UIDevice.current.systemName,
+//            "deviceSystemVersion": UIDevice.current.systemVersion
+        ])
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
