@@ -96,6 +96,7 @@
 				TargetAttributes = {
 					188368BC1DC616BE001F3183 = {
 						CreatedOnToolsVersion = 8.1;
+						DevelopmentTeam = U7F7PVJTDH;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -258,6 +259,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = U7F7PVJTDH;
 				INFOPLIST_FILE = tracker/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = bmjpr.tracker;
@@ -270,6 +272,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = U7F7PVJTDH;
 				INFOPLIST_FILE = tracker/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = bmjpr.tracker;
