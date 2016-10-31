@@ -18,11 +18,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     var locationManager: CLLocationManager!
     var cloudUrlString = "https://steptracker.tw1.ru/track.php"
     var lastUpdateTime : Date!
-    
+    var timer : Timer!
+
     func deviceUuid() -> String {
         return (UIDevice.current.identifierForVendor?.uuidString)!
     }
-    
+
     func sendJson(urlString: String, data: Any) -> Bool {
         var jsonData : Data
         do {
@@ -77,17 +78,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         UIDevice.current.isBatteryMonitoringEnabled = true
 
+        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerEvent), userInfo: nil, repeats: true)
+
         locationManager = CLLocationManager()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters // kCLLocationAccuracyBest
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation // kCLLocationAccuracyNearestTenMeters // kCLLocationAccuracyBest
+//        locationManager.distanceFilter = 1.0
+//        locationManager.headingFilter = 5
+        locationManager.allowsBackgroundLocationUpdates = true
         locationManager.requestAlwaysAuthorization()
         locationManager.startUpdatingLocation()
 
         return true
     }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        let location = locations.last! as CLLocation
+
+    func timerEvent() {
+        print("timer")
+        let viewController = window?.rootViewController as! ViewController
+        let interval : TimeInterval = Date().timeIntervalSince(lastUpdateTime)
+        let intervalSeconds = Int(interval)
+        viewController.mySetLabelText(text: String(intervalSeconds))
+    }
+
+    func updateLocation() {
+        let location = locationManager.location! as CLLocation
 
         let success = sendJson(urlString: cloudUrlString, data: [
             "deviceId": deviceUuid(),
@@ -101,16 +115,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             "deviceName": UIDevice.current.name,
             "deviceSystemName": UIDevice.current.systemName,
             "deviceSystemVersion": UIDevice.current.systemVersion
-        ])
+            ])
 
         if (success) {
+            print(Date(), "success update")
             lastUpdateTime = Date.init()
         }
-
-        let viewController = window?.rootViewController as! ViewController
-        let interval : TimeInterval = Date().timeIntervalSince(lastUpdateTime)
-        let intervalSeconds = Int(interval)
-        viewController.mySetLabelText(text: String(intervalSeconds))
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        updateLocation()
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -119,10 +133,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         print("applicationDidEnterBackground")
+        timer.invalidate()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
         print("applicationWillEnterForeground")
+        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerEvent), userInfo: nil, repeats: true)
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
