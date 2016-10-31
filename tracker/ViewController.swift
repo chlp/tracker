@@ -23,8 +23,6 @@ class ViewController: UIViewController {
     }
 
     public func mySetLabelText(text: String) {
-        print("mySet")
-        print(text)
         label.text = text
     }
 }

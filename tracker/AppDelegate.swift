@@ -42,7 +42,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         var httpError = false
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            guard let data = data, error == nil else {
+            guard let _ = data, error == nil else {
                 print("error=\(error)")
                 httpError = true
                 semaphore.signal()
@@ -55,15 +55,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
                 httpError = true
             }
 
-            let responseString = String(data: data, encoding: .utf8)
-            print("responseString = \(responseString)")
+//            let responseString = String(data: data, encoding: .utf8)
             semaphore.signal()
         }
         task.resume()
 
         semaphore.wait()
 
-        print("err", httpError)
         return !httpError
     }
 
@@ -81,7 +79,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         locationManager = CLLocationManager()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters // kCLLocationAccuracyBest
         locationManager.requestAlwaysAuthorization()
         locationManager.startUpdatingLocation()
 
@@ -105,7 +103,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             "deviceSystemVersion": UIDevice.current.systemVersion
         ])
 
-        print("suc", success)
         if (success) {
             lastUpdateTime = Date.init()
         }
