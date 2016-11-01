@@ -11,18 +11,21 @@ import Darwin
 import CoreLocation
 
 
-let CLOUD_URL:String = "https://steptracker.tw1.ru/track.php"
-let LOCATIONS_QUEUE_LIMIT = 99
+let CLOUD_URL: String = "https://steptracker.tw1.ru/track.php"
+let LOCATIONS_QUEUE_LIMIT: Int = 99
+let LOCATION_UPDATE_INTERVAL: Double = 60
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
 
     var window: UIWindow?
     var locationManager: CLLocationManager!
-    var lastLocationTime : Date!
-    var lastSendTime : Date!
-    var timer : Timer!
-    var locationsMarkersArr : [Data]!
+    var lastLocationTime: Date!
+    var lastSendTime: Date!
+    var timerUpdateLocation: Timer!
+    var timerSendLocation: Timer!
+    var timerUpdateGui: Timer!
+    var locationsMarkersArr: [Data]!
 
     func deviceUuid() -> String {
         return (UIDevice.current.identifierForVendor?.uuidString)!
@@ -36,17 +39,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         var request = URLRequest(url: URL(string: CLOUD_URL)!)
         request.httpMethod = "POST"
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
-        request.httpBody = locationsMarkersArr.remove(at: 0)
+        let jsonData = locationsMarkersArr.remove(at: 0)
+        request.httpBody = jsonData // todo: вот бы отправлять всю очередь одним запросом
 
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard let _ = data, error == nil else {
                 print("error=\(error)")
+                self.locationsMarkersArr.append(jsonData)
                 return
             }
 
             if let httpStatus = response as? HTTPURLResponse, httpStatus.statusCode != 200 {
                 print("statusCode should be 200, but is \(httpStatus.statusCode)")
                 print("response = \(response)")
+                self.locationsMarkersArr.append(jsonData)
             } else {
                 print(Date(), "success sendLocation")
                 self.lastSendTime = Date.init()
@@ -69,13 +75,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         UIDevice.current.isBatteryMonitoringEnabled = true
 
-        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerEvent), userInfo: nil, repeats: true)
+        timerUpdateLocation = Timer.scheduledTimer(timeInterval: LOCATION_UPDATE_INTERVAL, target: self, selector: #selector(timerUpdateLocationEvent), userInfo: nil, repeats: true) // todo: вот бы интервал был обратно пропорционален текущей скорости
+        timerSendLocation = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerSendLocationEvent), userInfo: nil, repeats: true)
+        timerUpdateGui = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerUpdateGuiEvent), userInfo: nil, repeats: true)
 
         locationManager = CLLocationManager()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation // kCLLocationAccuracyBest
-        locationManager.distanceFilter = 10.0
-//        locationManager.headingFilter = 5
+        //        locationManager.distanceFilter = 10.0
+        //        locationManager.headingFilter = 5
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.requestAlwaysAuthorization()
         locationManager.startUpdatingLocation()
@@ -83,8 +91,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         return true
     }
 
-    func timerEvent() {
-        print("timer")
+    func timerUpdateLocationEvent() {
+        print("t L")
+        locationManager.startUpdatingLocation()
+    }
+
+    func timerSendLocationEvent() {
+        print("t S")
+        sendLocationsToCloud()
+    }
+
+    func timerUpdateGuiEvent() {
+        print("t G")
         let viewController = window?.rootViewController as! ViewController
         let intervalSend = String(Int(Date().timeIntervalSince(lastSendTime)))
         let intervalLocation = String(Int(Date().timeIntervalSince(lastLocationTime)))
@@ -93,12 +111,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     }
 
     func updateLocation() {
+        print("updateLocation")
         let location = locationManager.location! as CLLocation
         let jsonData = try! JSONSerialization.data(withJSONObject: [
             "deviceId": deviceUuid(),
             "latitude": location.coordinate.latitude,
             "longitude": location.coordinate.longitude,
-            "timestamp": Date().timeIntervalSince1970,
+            "horizontalAccuracy": location.horizontalAccuracy, // todo: вот бы исключить неточные данные
+            "verticalAccuracy": location.verticalAccuracy,
+            "timestamp": location.timestamp.timeIntervalSince1970,
             "speed": location.speed,
             "batteryState": UIDevice.current.batteryState.rawValue,
             "batteryLevel": UIDevice.current.batteryLevel,
@@ -107,16 +128,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             "deviceName": UIDevice.current.name,
             //            "deviceSystemName": UIDevice.current.systemName,
             //            "deviceSystemVersion": UIDevice.current.systemVersion
-        ])
-        if (locationsMarkersArr.count >= LOCATIONS_QUEUE_LIMIT) {
-            locationsMarkersArr.remove(at: Int(arc4random_uniform(UInt32(LOCATIONS_QUEUE_LIMIT))))
+            ])
+        while (locationsMarkersArr.count >= LOCATIONS_QUEUE_LIMIT) {
+            locationsMarkersArr.remove(at: Int(arc4random_uniform(UInt32(LOCATIONS_QUEUE_LIMIT)))) // todo: вот бы удалять результаты с наихудшей точностью
         }
         locationsMarkersArr.append(jsonData)
         lastLocationTime = Date.init()
     }
-    
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         updateLocation()
+        locationManager.stopUpdatingLocation()
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -125,18 +147,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         print("applicationDidEnterBackground")
-//        timer.invalidate()
+        timerUpdateGui.invalidate()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
         print("applicationWillEnterForeground")
-//        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerEvent), userInfo: nil, repeats: true)
+        timerUpdateGui = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerUpdateGuiEvent), userInfo: nil, repeats: true)
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         print("applicationDidBecomeActive")
     }
-
+    
     func applicationWillTerminate(_ application: UIApplication) {
         print("applicationWillTerminate")
     }
