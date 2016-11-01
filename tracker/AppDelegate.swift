@@ -26,6 +26,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     var timerSendLocation: Timer!
     var timerUpdateGui: Timer!
     var locationsMarkersArr: [Data]!
+    var previousLocationTime: Date!
 
     func deviceUuid() -> String {
         return (UIDevice.current.identifierForVendor?.uuidString)!
@@ -67,6 +68,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         locationsMarkersArr = []
         lastSendTime = Date.init(timeIntervalSince1970: 0)
         lastLocationTime = Date.init(timeIntervalSince1970: 0)
+        previousLocationTime = Date.init(timeIntervalSince1970: 0)
 
         if (!CLLocationManager.locationServicesEnabled()) {
             print("No location manager. Exit")
@@ -81,9 +83,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         locationManager = CLLocationManager()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation // kCLLocationAccuracyBest
-        //        locationManager.distanceFilter = 10.0
-        //        locationManager.headingFilter = 5
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        locationManager.distanceFilter = 0.1
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.requestAlwaysAuthorization()
         locationManager.startMonitoringSignificantLocationChanges()
@@ -94,7 +95,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func timerUpdateLocationEvent() {
         print("t L")
-        locationManager.startUpdatingLocation()
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        locationManager.distanceFilter = 0.1
     }
 
     func timerSendLocationEvent() {
@@ -112,15 +114,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     }
 
     func updateLocation() {
-        print("updateLocation")
         let location = locationManager.location! as CLLocation
+
+        let newLocationTime = location.timestamp
+        if (newLocationTime.timeIntervalSince(previousLocationTime) < 5) {
+            print("not updateLocation. Too frequently")
+            return
+        }
+
+        print("updateLocation")
+
+        previousLocationTime = newLocationTime
         let jsonData = try! JSONSerialization.data(withJSONObject: [
             "deviceId": deviceUuid(),
             "latitude": location.coordinate.latitude,
             "longitude": location.coordinate.longitude,
             "horizontalAccuracy": location.horizontalAccuracy, // todo: вот бы исключить неточные данные
             "verticalAccuracy": location.verticalAccuracy,
-            "timestamp": location.timestamp.timeIntervalSince1970,
+            "timestamp": newLocationTime.timeIntervalSince1970,
             "speed": location.speed,
             "batteryState": UIDevice.current.batteryState.rawValue,
             "batteryLevel": UIDevice.current.batteryLevel,
@@ -139,7 +150,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         updateLocation()
-        locationManager.stopUpdatingLocation()
+        locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+        locationManager.distanceFilter = 999999
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
