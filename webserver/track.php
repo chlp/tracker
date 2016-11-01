@@ -6,7 +6,7 @@ $data = json_decode($json, true);
 if (!$data) {
     return;
 }
-if (!isset($data['deviceId']) || !isset($data['latitude']) || !isset($data['longitude'])) {
+if (!isset($data['deviceId']) || !isset($data['latitude']) || !isset($data['longitude']) || !isset($data['timestamp'])) {
     return;
 }
 

@@ -12,33 +12,31 @@ import CoreLocation
 
 
 let CLOUD_URL:String = "https://steptracker.tw1.ru/track.php"
-
+let LOCATIONS_QUEUE_LIMIT = 99
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
 
     var window: UIWindow?
     var locationManager: CLLocationManager!
-    var lastUpdateTime : Date!
+    var lastLocationTime : Date!
+    var lastSendTime : Date!
     var timer : Timer!
+    var locationsMarkersArr : [Data]!
 
     func deviceUuid() -> String {
         return (UIDevice.current.identifierForVendor?.uuidString)!
     }
 
-    func sendLocationsToCloud(urlString: String, data: Any) {
-        var jsonData : Data
-        do {
-            jsonData = try JSONSerialization.data(withJSONObject: data)
-        } catch {
-            print("json error")
+    func sendLocationsToCloud() {
+        if (locationsMarkersArr.count == 0) {
             return
         }
 
-        var request = URLRequest(url: URL(string: urlString)!)
+        var request = URLRequest(url: URL(string: CLOUD_URL)!)
         request.httpMethod = "POST"
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
-        request.httpBody = jsonData
+        request.httpBody = locationsMarkersArr.remove(at: 0)
 
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard let _ = data, error == nil else {
@@ -50,8 +48,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
                 print("statusCode should be 200, but is \(httpStatus.statusCode)")
                 print("response = \(response)")
             } else {
-                print(Date(), "success update")
-                self.lastUpdateTime = Date.init()
+                print(Date(), "success sendLocation")
+                self.lastSendTime = Date.init()
             }
         }
         task.resume()
@@ -59,8 +57,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         print("application")
-        
-        lastUpdateTime = Date.init(timeIntervalSince1970: 0)
+
+        locationsMarkersArr = []
+        lastSendTime = Date.init(timeIntervalSince1970: 0)
+        lastLocationTime = Date.init(timeIntervalSince1970: 0)
 
         if (!CLLocationManager.locationServicesEnabled()) {
             print("No location manager. Exit")
@@ -73,8 +73,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         locationManager = CLLocationManager()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation // kCLLocationAccuracyNearestTenMeters // kCLLocationAccuracyBest
-//        locationManager.distanceFilter = 1.0
+        locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters // kCLLocationAccuracyBestForNavigation kCLLocationAccuracyBest
+        locationManager.distanceFilter = 10.0
 //        locationManager.headingFilter = 5
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.requestAlwaysAuthorization()
@@ -86,27 +86,33 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     func timerEvent() {
         print("timer")
         let viewController = window?.rootViewController as! ViewController
-        let interval : TimeInterval = Date().timeIntervalSince(lastUpdateTime)
-        let intervalSeconds = Int(interval)
-        viewController.mySetLabelText(text: String(intervalSeconds))
+        let intervalSend = String(Int(Date().timeIntervalSince(lastSendTime)))
+        let intervalLocation = String(Int(Date().timeIntervalSince(lastLocationTime)))
+        viewController.mySetLabelText(text: "send:" + intervalSend + ", location:" + intervalLocation)
+        sendLocationsToCloud()
     }
 
     func updateLocation() {
         let location = locationManager.location! as CLLocation
-
-        sendLocationsToCloud(urlString: CLOUD_URL, data: [
+        let jsonData = try! JSONSerialization.data(withJSONObject: [
             "deviceId": deviceUuid(),
             "latitude": location.coordinate.latitude,
-            "longitude": location.coordinate.longitude
-//            "speed": location.speed,
-//            "batteryState": UIDevice.current.batteryState.rawValue,
-//            "batteryLevel": UIDevice.current.batteryLevel,
-//            "deviceModel": UIDevice.current.model,
-//            "deviceLocalizedModel": UIDevice.current.localizedModel,
-//            "deviceName": UIDevice.current.name,
-//            "deviceSystemName": UIDevice.current.systemName,
-//            "deviceSystemVersion": UIDevice.current.systemVersion
+            "longitude": location.coordinate.longitude,
+            "timestamp": Date().timeIntervalSince1970
+            //            "speed": location.speed,
+            //            "batteryState": UIDevice.current.batteryState.rawValue,
+            //            "batteryLevel": UIDevice.current.batteryLevel,
+            //            "deviceModel": UIDevice.current.model,
+            //            "deviceLocalizedModel": UIDevice.current.localizedModel,
+            //            "deviceName": UIDevice.current.name,
+            //            "deviceSystemName": UIDevice.current.systemName,
+            //            "deviceSystemVersion": UIDevice.current.systemVersion
         ])
+        if (locationsMarkersArr.count >= LOCATIONS_QUEUE_LIMIT) {
+            locationsMarkersArr.remove(at: Int(arc4random_uniform(UInt32(LOCATIONS_QUEUE_LIMIT))))
+        }
+        locationsMarkersArr.append(jsonData)
+        lastLocationTime = Date.init()
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -119,12 +125,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         print("applicationDidEnterBackground")
-        timer.invalidate()
+//        timer.invalidate()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
         print("applicationWillEnterForeground")
-        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerEvent), userInfo: nil, repeats: true)
+//        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerEvent), userInfo: nil, repeats: true)
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
