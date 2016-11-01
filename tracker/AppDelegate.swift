@@ -98,13 +98,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             "deviceId": deviceUuid(),
             "latitude": location.coordinate.latitude,
             "longitude": location.coordinate.longitude,
-            "timestamp": Date().timeIntervalSince1970
-            //            "speed": location.speed,
-            //            "batteryState": UIDevice.current.batteryState.rawValue,
-            //            "batteryLevel": UIDevice.current.batteryLevel,
+            "timestamp": Date().timeIntervalSince1970,
+            "speed": location.speed,
+            "batteryState": UIDevice.current.batteryState.rawValue,
+            "batteryLevel": UIDevice.current.batteryLevel,
             //            "deviceModel": UIDevice.current.model,
             //            "deviceLocalizedModel": UIDevice.current.localizedModel,
-            //            "deviceName": UIDevice.current.name,
+            "deviceName": UIDevice.current.name,
             //            "deviceSystemName": UIDevice.current.systemName,
             //            "deviceSystemVersion": UIDevice.current.systemVersion
         ])
