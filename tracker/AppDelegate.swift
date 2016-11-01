@@ -13,7 +13,8 @@ import CoreLocation
 
 let CLOUD_URL: String = "https://steptracker.tw1.ru/track.php"
 let LOCATIONS_QUEUE_LIMIT: Int = 99
-let LOCATION_UPDATE_INTERVAL: Double = 180
+let LOCATION_UPDATE_INTERVAL: Double = 20
+let MIN_GPS_ACCURACY: Double = 300;
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
@@ -27,6 +28,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     var timerUpdateGui: Timer!
     var locationsMarkersArr: [Data]!
     var previousLocationTime: Date!
+    var previousHorizontalAccuracy: Double!
 
     func deviceUuid() -> String {
         return (UIDevice.current.identifierForVendor?.uuidString)!
@@ -69,6 +71,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         lastSendTime = Date.init(timeIntervalSince1970: 0)
         lastLocationTime = Date.init(timeIntervalSince1970: 0)
         previousLocationTime = Date.init(timeIntervalSince1970: 0)
+        previousHorizontalAccuracy = 0
 
         if (!CLLocationManager.locationServicesEnabled()) {
             print("No location manager. Exit")
@@ -83,8 +86,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         locationManager = CLLocationManager()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.distanceFilter = 0.1
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = 1
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.requestAlwaysAuthorization()
         locationManager.startMonitoringSignificantLocationChanges()
@@ -95,8 +98,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func timerUpdateLocationEvent() {
         print("t L")
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        locationManager.distanceFilter = 0.1
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = 1
     }
 
     func timerSendLocationEvent() {
@@ -113,23 +116,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         sendLocationsToCloud()
     }
 
-    func updateLocation() {
+    func updateLocation() -> Bool {
         let location = locationManager.location! as CLLocation
+        let horizontalAccuracy = location.horizontalAccuracy
 
-        let newLocationTime = location.timestamp
-        if (newLocationTime.timeIntervalSince(previousLocationTime) < 5) {
-            print("not updateLocation. Too frequently")
-            return
+        print("try updateLocation with horizontalAccuracy:", horizontalAccuracy)
+        if (horizontalAccuracy > MIN_GPS_ACCURACY) {
+            print("----not updateLocation. Min accuracy")
+            return false
         }
 
-        print("updateLocation")
+        let newLocationTime = Date()
+        print("timediff", newLocationTime.timeIntervalSince(previousLocationTime))
+        if (newLocationTime.timeIntervalSince(previousLocationTime) < 5) {
+            if (Double(horizontalAccuracy) < Double(previousHorizontalAccuracy)) {
+                print("----too frequently, but accuracy better. Continue")
+            } else {
+                print("----not updateLocation. Too frequently")
+                return false
+            }
+        }
 
-        previousLocationTime = newLocationTime
         let jsonData = try! JSONSerialization.data(withJSONObject: [
             "deviceId": deviceUuid(),
             "latitude": location.coordinate.latitude,
             "longitude": location.coordinate.longitude,
-            "horizontalAccuracy": location.horizontalAccuracy, // todo: вот бы исключить неточные данные
+            "horizontalAccuracy": horizontalAccuracy,
             "verticalAccuracy": location.verticalAccuracy,
             "timestamp": newLocationTime.timeIntervalSince1970,
             "speed": location.speed,
@@ -146,12 +158,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         }
         locationsMarkersArr.append(jsonData)
         lastLocationTime = Date.init()
+        previousLocationTime = newLocationTime
+        previousHorizontalAccuracy = horizontalAccuracy
+        print("----updateLocation")
+
+        return true
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        updateLocation()
-        locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
-        locationManager.distanceFilter = 999999
+        if (updateLocation()) {
+            locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+            locationManager.distanceFilter = 999999
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
