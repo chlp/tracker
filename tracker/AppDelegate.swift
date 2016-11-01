@@ -88,7 +88,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         let viewController = window?.rootViewController as! ViewController
         let intervalSend = String(Int(Date().timeIntervalSince(lastSendTime)))
         let intervalLocation = String(Int(Date().timeIntervalSince(lastLocationTime)))
-        viewController.mySetLabelText(text: "send:" + intervalSend + ", location:" + intervalLocation)
+        viewController.mySetLabelText(text: "send:" + intervalSend + "\r\nlocation:" + intervalLocation + "\r\nqueue:" + String(locationsMarkersArr.count))
         sendLocationsToCloud()
     }
 
