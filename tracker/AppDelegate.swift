@@ -13,7 +13,7 @@ import CoreLocation
 
 let CLOUD_URL: String = "https://steptracker.tw1.ru/track.php"
 let LOCATIONS_QUEUE_LIMIT: Int = 99
-let LOCATION_UPDATE_INTERVAL: Double = 60
+let LOCATION_UPDATE_INTERVAL: Double = 180
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
@@ -86,6 +86,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         //        locationManager.headingFilter = 5
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.requestAlwaysAuthorization()
+        locationManager.startMonitoringSignificantLocationChanges()
         locationManager.startUpdatingLocation()
 
         return true
