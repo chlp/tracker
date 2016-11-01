@@ -73,7 +73,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         locationManager = CLLocationManager()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters // kCLLocationAccuracyBestForNavigation kCLLocationAccuracyBest
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation // kCLLocationAccuracyBest
         locationManager.distanceFilter = 10.0
 //        locationManager.headingFilter = 5
         locationManager.allowsBackgroundLocationUpdates = true

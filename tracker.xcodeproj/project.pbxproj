@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		18014BC01DC7EFD900CAC8F5 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 18014BBF1DC7EFD900CAC8F5 /* LICENSE */; };
 		18014BC21DC7F00A00CAC8F5 /* webserver in Resources */ = {isa = PBXBuildFile; fileRef = 18014BC11DC7F00A00CAC8F5 /* webserver */; };
+		1822E26B1DC867E600C5E2AB /* kCLLocationAccuracyNearestTenMeters-example.png in Resources */ = {isa = PBXBuildFile; fileRef = 1822E26A1DC867E600C5E2AB /* kCLLocationAccuracyNearestTenMeters-example.png */; };
 		188368C11DC616BE001F3183 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 188368C01DC616BE001F3183 /* AppDelegate.swift */; };
 		188368C31DC616BE001F3183 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 188368C21DC616BE001F3183 /* ViewController.swift */; };
 		188368C61DC616BE001F3183 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 188368C41DC616BE001F3183 /* Main.storyboard */; };
@@ -19,6 +20,7 @@
 /* Begin PBXFileReference section */
 		18014BBF1DC7EFD900CAC8F5 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = SOURCE_ROOT; };
 		18014BC11DC7F00A00CAC8F5 /* webserver */ = {isa = PBXFileReference; lastKnownFileType = folder; path = webserver; sourceTree = "<group>"; };
+		1822E26A1DC867E600C5E2AB /* kCLLocationAccuracyNearestTenMeters-example.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "kCLLocationAccuracyNearestTenMeters-example.png"; path = "more/kCLLocationAccuracyNearestTenMeters-example.png"; sourceTree = "<group>"; };
 		188368BD1DC616BE001F3183 /* tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		188368C01DC616BE001F3183 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; usesTabs = 0; };
 		188368C21DC616BE001F3183 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -42,6 +44,7 @@
 		188368B41DC616BE001F3183 = {
 			isa = PBXGroup;
 			children = (
+				1822E26A1DC867E600C5E2AB /* kCLLocationAccuracyNearestTenMeters-example.png */,
 				18014BC11DC7F00A00CAC8F5 /* webserver */,
 				188368BF1DC616BE001F3183 /* tracker */,
 				188368BE1DC616BE001F3183 /* Products */,
@@ -132,6 +135,7 @@
 			files = (
 				188368CB1DC616BE001F3183 /* LaunchScreen.storyboard in Resources */,
 				188368C81DC616BE001F3183 /* Assets.xcassets in Resources */,
+				1822E26B1DC867E600C5E2AB /* kCLLocationAccuracyNearestTenMeters-example.png in Resources */,
 				18014BC01DC7EFD900CAC8F5 /* LICENSE in Resources */,
 				18014BC21DC7F00A00CAC8F5 /* webserver in Resources */,
 				188368C61DC616BE001F3183 /* Main.storyboard in Resources */,
