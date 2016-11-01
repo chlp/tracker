@@ -13,7 +13,7 @@ import CoreLocation
 
 let CLOUD_URL: String = "https://steptracker.tw1.ru/track.php"
 let LOCATIONS_QUEUE_LIMIT: Int = 99
-let LOCATION_UPDATE_INTERVAL: Double = 20
+let LOCATION_UPDATE_INTERVAL: Double = 120
 let MIN_GPS_ACCURACY: Double = 300;
 
 @UIApplicationMain
@@ -127,7 +127,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         }
 
         let newLocationTime = Date()
-        print("timediff", newLocationTime.timeIntervalSince(previousLocationTime))
         if (newLocationTime.timeIntervalSince(previousLocationTime) < 5) {
             if (Double(horizontalAccuracy) < Double(previousHorizontalAccuracy)) {
                 print("----too frequently, but accuracy better. Continue")
