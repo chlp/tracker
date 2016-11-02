@@ -1,4 +1,16 @@
 <?
+$minHorizontalAccuracy = 1500;
+if (array_key_exists('accuracy', $_GET)) {
+    $minHorizontalAccuracy = (int)$_GET['accuracy'];
+}
+?>
+
+<form method="get" action="/map.php" style="display: inline;">
+точность (меньше точнее): <input type="number" min="0" max="9999" name="accuracy" value="<?=$minHorizontalAccuracy?>">
+<input type="submit">
+</form>
+
+<?
 $dir = "tracks/21B07E41-22A8-49D6-951B-68B60D3FF61E";
 $files = scandir($dir);
 $array = array();
@@ -8,13 +20,18 @@ foreach($files as $file) {
     $json = file_get_contents("$dir/$file");
     $data = json_decode($json, true);
     if ($data['deviceId'] == '21B07E41-22A8-49D6-951B-68B60D3FF61E') {
+        if($data['horizontalAccuracy'] >= $minHorizontalAccuracy) {
+            continue;
+        }
         $array[] = array(
                          'latitude' => $data['latitude'],
                          'longitude'=>$data['longitude'],
-                         'time'=>date('c', (int)$data['timestamp'])
+                         'info'=>date('c', (int)$data['timestamp'])."<br>horizontalAccuracy {$data['horizontalAccuracy']}<br>speed: {$data['speed']}<br>batteryState: {$data['batteryState']}<br>batteryLevel: {$data['batteryLevel']}"
                          );
     }
 }
+
+echo count($array) . ' точек найдено<br>';
 
 echo measurementsMap($array);
 
@@ -27,7 +44,7 @@ function measurementsMap($measurements)
         }
         $markers[] = <<<EOF
         [
-        "{$measurementInfo['time']}",
+        "{$measurementInfo['info']}",
         {$measurementInfo['latitude']},
         {$measurementInfo['longitude']}
         ]
@@ -35,7 +52,6 @@ function measurementsMap($measurements)
     }
     $markersArrStr = implode(",\r\n", $markers);
     $html = <<<EOF
-    <input type="button" value="on map" onclick="initMap()">
     <div id="map" style="display: none; width: 90vw; margin-left: 5vw; height: 80vh;"></div>
     <script type="text/javascript">
     function initMap() {
@@ -69,7 +85,7 @@ function measurementsMap($measurements)
         map.fitBounds(bounds);
     }
     </script>
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC-l8wFA45bO7u9YWx5Gkjz02Cw7Ootolg">
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC-l8wFA45bO7u9YWx5Gkjz02Cw7Ootolg&callback=initMap">
     </script>
     EOF;
     return $html;
