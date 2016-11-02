@@ -7,23 +7,25 @@
 //
 
 //TODO: try to use https://github.com/malcommac/SwiftLocation
+//TODO: view https://github.com/koogawa/iSensorSwift https://github.com/koogawa/iSensorSwift/blob/master/iSensorSwift/Controller/MotionActivityViewController.swift
 //TODO: add steps counter
 
 import UIKit
 import Darwin
 import CoreLocation
+import CoreMotion
 
 
 let CLOUD_URL: String = "https://steptracker.tw1.ru/track.php"
 let LOCATIONS_QUEUE_LIMIT: Int = 99
 let LOCATION_UPDATE_INTERVAL: Double = 120
-let MIN_GPS_ACCURACY: Double = 300;
+let MIN_GPS_ACCURACY: Double = 10300;
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
 
     var window: UIWindow?
-    var locationManager: CLLocationManager!
+    let locationManager = CLLocationManager()
     var lastLocationTime: Date!
     var lastSendTime: Date!
     var timerUpdateLocation: Timer!
@@ -32,6 +34,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     var locationsMarkersArr: [Data]!
     var previousLocationTime: Date!
     var previousHorizontalAccuracy: Double!
+
+    let activityManager = CMMotionActivityManager()
+    var currentActivityPosition: String!
+    let pedometer = CMPedometer()
+    var distance: Double!
+    var steps: Int!
+    var pedometerFrom: Date!
+    var pedometerTo: Date!
+
 
     func deviceUuid() -> String {
         return (UIDevice.current.identifierForVendor?.uuidString)!
@@ -76,6 +87,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         previousLocationTime = Date.init(timeIntervalSince1970: 0)
         previousHorizontalAccuracy = 0
 
+        currentActivityPosition = "_unknown_"
+        steps = 0
+        distance = 0
+        pedometerFrom = Date()
+        pedometerTo = Date()
+
         if (!CLLocationManager.locationServicesEnabled()) {
             print("No location manager. Exit")
             exit(0)
@@ -86,23 +103,69 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         timerUpdateLocation = Timer.scheduledTimer(timeInterval: LOCATION_UPDATE_INTERVAL, target: self, selector: #selector(timerUpdateLocationEvent), userInfo: nil, repeats: true) //TODO: вот бы интервал был обратно пропорционален текущей скорости
         timerSendLocation = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerSendLocationEvent), userInfo: nil, repeats: true)
         timerUpdateGui = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerUpdateGuiEvent), userInfo: nil, repeats: true)
+        Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerActivityEvent), userInfo: nil, repeats: true)
 
-        locationManager = CLLocationManager()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 1
+        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        //locationManager.distanceFilter = 1
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.requestAlwaysAuthorization()
-        locationManager.startMonitoringSignificantLocationChanges()
+        locationManager.allowDeferredLocationUpdates(untilTraveled: 1, timeout: 30)
         locationManager.startUpdatingLocation()
+
+        if (CMMotionActivityManager.isActivityAvailable()) {
+            activityManager.startActivityUpdates(to: OperationQueue.main, withHandler: {
+                (data: CMMotionActivity?) -> Void in
+                DispatchQueue.main.async(execute: {
+                    if let data = data {
+                        var txt = ""
+                        if (data.stationary) {
+                            txt += " stationary"
+                        }
+                        if (data.walking) {
+                            txt += " walking"
+                        }
+                        if (data.running) {
+                            txt += " running"
+                        }
+                        if (data.automotive) {
+                            txt += " automotive"
+                        }
+                        if (data.unknown) {
+                            txt += " unknown"
+                        }
+                        txt += " confidence: " + String(data.confidence.rawValue)
+                        self.currentActivityPosition = txt
+                    }
+                })
+            })
+        }
+
+        if CMPedometer.isStepCountingAvailable() {
+            let cal = Calendar.current
+            var comp = cal.dateComponents(in: TimeZone.current, from: Date())
+            print(comp)
+            comp.hour = 0
+            comp.minute = 0
+            comp.second = 0
+            let midnightOfToday = cal.date(from: comp)!
+            pedometer.startUpdates(from: midnightOfToday) { (data: CMPedometerData?, error) -> Void in
+                DispatchQueue.main.async(execute: { () -> Void in
+                    self.steps = data?.numberOfSteps.intValue
+                    self.distance = data?.distance?.doubleValue
+                    self.pedometerFrom = data?.startDate
+                    self.pedometerTo = data?.endDate
+                })
+            }
+        }
 
         return true
     }
 
     func timerUpdateLocationEvent() {
         print("t L")
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 1
+        //locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        //locationManager.distanceFilter = 1
     }
 
     func timerSendLocationEvent() {
@@ -115,8 +178,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         let viewController = window?.rootViewController as! ViewController
         let intervalSend = String(Int(Date().timeIntervalSince(lastSendTime)))
         let intervalLocation = String(Int(Date().timeIntervalSince(lastLocationTime)))
-        viewController.mySetLabelText(text: "send:" + intervalSend + "\r\nlocation:" + intervalLocation + "\r\nqueue:" + String(locationsMarkersArr.count))
+        viewController.mySetLabelText(
+            text:
+                "send:" + intervalSend + "\r\nlocation:" + intervalLocation +
+                "\r\nqueue:" + String(locationsMarkersArr.count) +
+                "\r\nactivity:" + currentActivityPosition +
+                "\r\nsteps:" + String(steps) + ",dist:" + String(Int(distance)) +
+                "\r\nFrom:" + String(pedometerFrom.description)
+        )
         sendLocationsToCloud()
+    }
+
+    func timerActivityEvent() {
+        
     }
 
     func updateLocation() -> Bool {
@@ -154,6 +228,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             "deviceName": UIDevice.current.name,
             // "deviceSystemName": UIDevice.current.systemName,
             // "deviceSystemVersion": UIDevice.current.systemVersion
+            "currentActivityPosition": currentActivityPosition,
+            "steps": steps,
+            "distance": distance,
+            "pedometerFrom": pedometerFrom.timeIntervalSince1970,
+            "pedometerTo": pedometerTo.timeIntervalSince1970
             ])
         while (locationsMarkersArr.count >= LOCATIONS_QUEUE_LIMIT) {
             locationsMarkersArr.remove(at: Int(arc4random_uniform(UInt32(LOCATIONS_QUEUE_LIMIT)))) //TODO: вот бы удалять результаты с наихудшей точностью
@@ -169,8 +248,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if (updateLocation()) {
-            locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
-            locationManager.distanceFilter = 999999
+            //locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+            //locationManager.distanceFilter = 999999
         }
     }
 
