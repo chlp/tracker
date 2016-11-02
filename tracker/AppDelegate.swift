@@ -6,6 +6,9 @@
 //  Copyright © 2016 bamj.pro. All rights reserved.
 //
 
+//TODO: try to use https://github.com/malcommac/SwiftLocation
+//TODO: add steps counter
+
 import UIKit
 import Darwin
 import CoreLocation
@@ -43,7 +46,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         request.httpMethod = "POST"
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
         let jsonData = locationsMarkersArr.remove(at: 0)
-        request.httpBody = jsonData // todo: вот бы отправлять всю очередь одним запросом
+        request.httpBody = jsonData //TODO: вот бы отправлять всю очередь одним запросом
 
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard let _ = data, error == nil else {
@@ -80,7 +83,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
         UIDevice.current.isBatteryMonitoringEnabled = true
 
-        timerUpdateLocation = Timer.scheduledTimer(timeInterval: LOCATION_UPDATE_INTERVAL, target: self, selector: #selector(timerUpdateLocationEvent), userInfo: nil, repeats: true) // todo: вот бы интервал был обратно пропорционален текущей скорости
+        timerUpdateLocation = Timer.scheduledTimer(timeInterval: LOCATION_UPDATE_INTERVAL, target: self, selector: #selector(timerUpdateLocationEvent), userInfo: nil, repeats: true) //TODO: вот бы интервал был обратно пропорционален текущей скорости
         timerSendLocation = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerSendLocationEvent), userInfo: nil, repeats: true)
         timerUpdateGui = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(timerUpdateGuiEvent), userInfo: nil, repeats: true)
 
@@ -146,14 +149,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             "speed": location.speed,
             "batteryState": UIDevice.current.batteryState.rawValue,
             "batteryLevel": UIDevice.current.batteryLevel,
-            //            "deviceModel": UIDevice.current.model,
-            //            "deviceLocalizedModel": UIDevice.current.localizedModel,
+            // "deviceModel": UIDevice.current.model,
+            // "deviceLocalizedModel": UIDevice.current.localizedModel,
             "deviceName": UIDevice.current.name,
-            //            "deviceSystemName": UIDevice.current.systemName,
-            //            "deviceSystemVersion": UIDevice.current.systemVersion
+            // "deviceSystemName": UIDevice.current.systemName,
+            // "deviceSystemVersion": UIDevice.current.systemVersion
             ])
         while (locationsMarkersArr.count >= LOCATIONS_QUEUE_LIMIT) {
-            locationsMarkersArr.remove(at: Int(arc4random_uniform(UInt32(LOCATIONS_QUEUE_LIMIT)))) // todo: вот бы удалять результаты с наихудшей точностью
+            locationsMarkersArr.remove(at: Int(arc4random_uniform(UInt32(LOCATIONS_QUEUE_LIMIT)))) //TODO: вот бы удалять результаты с наихудшей точностью
         }
         locationsMarkersArr.append(jsonData)
         lastLocationTime = Date.init()
